@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realistic Space Simulation</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="spaceCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('spaceCanvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const stars = [];
+        const numStars = 1234;
+        let velocityX = 0;
+        let velocityY = 0;
+        let speed = 9.11;
+
+        function random(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        function createBackgroundGradient() {
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, "#000000"); // Black
+            gradient.addColorStop(0.3, "#0a0a40"); // Dark Blue
+            gradient.addColorStop(0.5, "#202060"); // Blue
+            gradient.addColorStop(0.7, "#402050"); // Reddish Blue
+            gradient.addColorStop(1, "#503080"); // Bluish Violet
+            return gradient;
+        }
+
+        class Star {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = random(-canvas.width, canvas.width * 2);
+                this.y = random(-canvas.height, canvas.height * 2);
+                this.z = random(1, canvas.width);
+                this.size = random(1, 3);
+            }
+
+            update() {
+                this.z -= speed;
+                if (this.z < 1) {
+                    this.reset();
+                    this.z = canvas.width;
+                }
+            }
+
+            draw() {
+                const sx = (this.x - canvas.width / 2) * (canvas.width / this.z) + canvas.width / 2;
+                const sy = (this.y - canvas.height / 2) * (canvas.height / this.z) + canvas.height / 2;
+                const radius = (canvas.width / this.z) * this.size;
+
+                ctx.beginPath();
+                ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+                ctx.fill();
+            }
+        }
+
+        function createStars() {
+            for (let i = 0; i < numStars; i++) {
+                stars.push(new Star());
+            }
+        }
+
+        function animate() {
+            ctx.fillStyle = createBackgroundGradient();
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            stars.forEach(star => {
+                star.update();
+                star.draw();
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowUp") speed += 0.2;
+            if (event.key === "ArrowDown") speed -= 0.2;
+            if (speed < 0.1) speed = 0.1;
+        });
+
+        createStars();
+        animate();
+    </script>
+</body>
+</html>
