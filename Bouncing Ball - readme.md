@@ -96,3 +96,4 @@ This project is licensed under the MIT License. See the `LICENSE` file for detai
 ---
 
 Enjoy the animation and feel free to share your feedback!
+ 
