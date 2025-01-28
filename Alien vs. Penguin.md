@@ -91,3 +91,4 @@ This game is compatible with all modern browsers that support the HTML5 `<canvas
 ## License
 
 This project is open-source and licensed under the MIT License. Feel free to modify and distribute it as needed.
+ 
