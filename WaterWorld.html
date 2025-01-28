@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Underwater Fish Simulation</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            background: linear-gradient(to bottom, #87CEEB, #1E90FF);
+        }
+        .fish, .bubble, .prawn {
+            position: absolute;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="oceanCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById("oceanCanvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const fishArray = [];
+        const bubbleArray = [];
+        const prawnArray = [];
+        const numFish = 20;
+        const maxBubbles = 24;
+        const numPrawns = 32;
+        const fishEmojis = ['🧜🏼‍♀️', '🦑', '🐟', '🐋', '🐬', '🦞', '🦈', '🐡', '🐠'];
+
+        class Fish {
+            constructor(x, y, size, speed, direction) {
+                this.x = x;
+                this.y = y;
+                this.size = size * 1.5;
+                this.speed = speed;
+                this.direction = direction;
+                this.emoji = fishEmojis[Math.floor(Math.random() * fishEmojis.length)];
+                this.element = document.createElement("div");
+                this.element.className = "fish";
+                this.element.textContent = this.emoji;
+                this.element.style.fontSize = `${this.size}px`;
+                this.element.style.color = `hsl(${Math.random() * 360}, 70%, 50%)`;
+                document.body.appendChild(this.element);
+            }
+
+            draw() {
+                this.element.style.left = `${this.x}px`;
+                this.element.style.top = `${this.y}px`;
+            }
+
+            update() {
+                this.direction += (Math.random() - 0.5) * 0.1; // Random adjustments to direction
+                this.x += Math.cos(this.direction) * this.speed;
+                this.y += Math.sin(this.direction) * this.speed;
+
+                // Bounce off walls
+                if (this.x - this.size < 0 || this.x + this.size > canvas.width) {
+                    this.direction = Math.PI - this.direction;
+                }
+                if (this.y - this.size < 0 || this.y + this.size > canvas.height) {
+                    this.direction = -this.direction;
+                }
+            }
+
+            checkCollision(otherFish) {
+                const dx = this.x - otherFish.x;
+                const dy = this.y - otherFish.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < this.size) {
+                    if (this.size > otherFish.size) {
+                        this.size += otherFish.size * 0.2;
+                        document.body.removeChild(otherFish.element); // Remove smaller fish
+                        return true; // Collision occurred
+                    }
+                }
+                return false;
+            }
+        }
+
+        class Prawn {
+            constructor(x, size, speed) {
+                this.x = x;
+                this.y = canvas.height - size; // Stay at the bottom
+                this.size = size;
+                this.speed = speed;
+                this.element = document.createElement("div");
+                this.element.className = "prawn";
+                this.element.textContent = "🦐";
+                this.element.style.fontSize = `${this.size * 2}px`;
+                document.body.appendChild(this.element);
+            }
+
+            draw() {
+                this.element.style.left = `${this.x}px`;
+                this.element.style.top = `${this.y}px`;
+            }
+
+            update() {
+                this.x += this.speed;
+                if (this.x - this.size < 0 || this.x + this.size > canvas.width) {
+                    this.speed = -this.speed; // Reverse direction
+                }
+            }
+        }
+
+        class Bubble {
+            constructor(x, size, speed) {
+                this.x = x;
+                this.y = canvas.height + size; // Start below the canvas
+                this.size = size;
+                this.speed = speed;
+                this.element = document.createElement("div");
+                this.element.className = "bubble";
+                this.element.textContent = "🫧";
+                this.element.style.fontSize = `${this.size}px`;
+                document.body.appendChild(this.element);
+            }
+
+            draw() {
+                this.element.style.left = `${this.x}px`;
+                this.element.style.top = `${this.y}px`;
+            }
+
+            update() {
+                this.y -= this.speed;
+                if (this.y + this.size < 0) {
+                    // Remove bubble when it goes off the screen
+                    document.body.removeChild(this.element);
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        function initializeFish() {
+            for (let i = 0; i < numFish; i++) {
+                const size = Math.random() * 20 + 10;
+                const x = Math.random() * (canvas.width - size * 2) + size;
+                const y = Math.random() * (canvas.height - size * 2) + size;
+                const speed = Math.random() * 2 + 1;
+                const direction = Math.random() * Math.PI * 2;
+                const fish = new Fish(x, y, size, speed, direction);
+                fishArray.push(fish);
+                fish.draw();
+            }
+        }
+
+        function initializePrawns() {
+            for (let i = 0; i < numPrawns; i++) {
+                const size = Math.random() * 4 + 8; // Prawn sizes range from 4 to 8
+                const x = Math.random() * canvas.width;
+                const speed = (Math.random() * 4 + 1) * (Math.random() < 0.2 ? -1 : 1); // Random direction
+                const prawn = new Prawn(x, size, speed);
+                prawnArray.push(prawn);
+                prawn.draw();
+            }
+        }
+
+        function initializeBubbles() {
+            if (bubbleArray.length < maxBubbles) {
+                const size = Math.random() * 10 + 5;
+                const x = Math.random() * canvas.width;
+                const speed = Math.random() * 2 + 1;
+                const bubble = new Bubble(x, size, speed);
+                bubbleArray.push(bubble);
+                bubble.draw();
+            }
+        }
+
+        function animate() {
+            for (let i = fishArray.length - 1; i >= 0; i--) {
+                const fish = fishArray[i];
+                fish.update();
+                fish.draw();
+
+                for (let j = fishArray.length - 1; j >= 0; j--) {
+                    if (i !== j) {
+                        const otherFish = fishArray[j];
+                        if (fish.checkCollision(otherFish)) {
+                            fishArray.splice(j, 1); // Remove the smaller fish from the array
+                            break;
+                        }
+                    }
+                }
+            }
+
+            for (let i = prawnArray.length - 1; i >= 0; i--) {
+                const prawn = prawnArray[i];
+                prawn.update();
+                prawn.draw();
+            }
+
+            for (let i = bubbleArray.length - 1; i >= 0; i--) {
+                const bubble = bubbleArray[i];
+                if (!bubble.update()) {
+                    bubbleArray.splice(i, 1); // Remove bubbles that are off screen
+                } else {
+                    bubble.draw();
+                }
+            }
+
+            initializeBubbles();
+
+            if (fishArray.length > 1) {
+                requestAnimationFrame(animate);
+            } else {
+                alert(`The last fish survived with a size of ${fishArray[0].size.toFixed(1)}!`);
+            }
+        }
+
+        initializeFish();
+        initializePrawns();
+        animate();
+    </script>
+</body>
+</html>
