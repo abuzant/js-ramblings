@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maze Race to the Castle</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const cellSize = 20;
+        const cols = Math.floor(canvas.width / cellSize);
+        const rows = Math.floor(canvas.height / cellSize);
+
+        let maze = [];
+        let stack = [];
+
+        let alien = { x: 0, y: 0, emoji: "👽" };
+        let penguin = { x: cols - 1, y: rows - 1, emoji: "🐧" };
+        let castle = { x: 0, y: 0, emoji: "🏰" };
+
+        let isAnimating = false;
+        const alienSpeed = 100;
+        const penguinSpeed = 150;
+
+        class Cell {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.walls = [true, true, true, true]; // Top, right, bottom, left
+                this.visited = false;
+            }
+
+            draw() {
+                const x = this.x * cellSize;
+                const y = this.y * cellSize;
+                ctx.strokeStyle = "#fff";
+                ctx.lineWidth = 2;
+                if (this.walls[0]) drawLine(x, y, x + cellSize, y); // Top
+                if (this.walls[1]) drawLine(x + cellSize, y, x + cellSize, y + cellSize); // Right
+                if (this.walls[2]) drawLine(x, y + cellSize, x + cellSize, y + cellSize); // Bottom
+                if (this.walls[3]) drawLine(x, y, x, y + cellSize); // Left
+            }
+
+            getNeighbors() {
+                const neighbors = [];
+                const directions = [
+                    { x: 0, y: -1, wall: 0, opposite: 2 }, // Top
+                    { x: 1, y: 0, wall: 1, opposite: 3 }, // Right
+                    { x: 0, y: 1, wall: 2, opposite: 0 }, // Bottom
+                    { x: -1, y: 0, wall: 3, opposite: 1 } // Left
+                ];
+
+                for (const dir of directions) {
+                    const nx = this.x + dir.x;
+                    const ny = this.y + dir.y;
+                    if (nx >= 0 && ny >= 0 && nx < cols && ny < rows) {
+                        const neighbor = maze[ny][nx];
+                        if (!neighbor.visited) neighbors.push({ neighbor, wall: dir.wall, opposite: dir.opposite });
+                    }
+                }
+
+                return neighbors;
+            }
+        }
+
+        function drawLine(x1, y1, x2, y2) {
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+
+        function generateMaze() {
+            maze = [];
+            stack = [];
+            for (let y = 0; y < rows; y++) {
+                const row = [];
+                for (let x = 0; x < cols; x++) {
+                    row.push(new Cell(x, y));
+                }
+                maze.push(row);
+            }
+
+            const start = maze[0][0];
+            start.visited = true;
+            stack.push(start);
+
+            while (stack.length > 0) {
+                const current = stack[stack.length - 1];
+                const neighbors = current.getNeighbors();
+
+                if (neighbors.length > 0) {
+                    const { neighbor, wall, opposite } = neighbors[Math.floor(Math.random() * neighbors.length)];
+
+                    current.walls[wall] = false;
+                    neighbor.walls[opposite] = false;
+
+                    neighbor.visited = true;
+                    stack.push(neighbor);
+                } else {
+                    stack.pop();
+                }
+            }
+        }
+
+        function drawMaze() {
+            for (const row of maze) {
+                for (const cell of row) {
+                    cell.draw();
+                }
+            }
+        }
+
+        function drawEmoji(obj) {
+            ctx.font = `${cellSize * 0.8}px Arial`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(obj.emoji, obj.x * cellSize + cellSize / 2, obj.y * cellSize + cellSize / 2);
+        }
+
+        function findPath(startX, startY, targetX, targetY) {
+            const queue = [{ x: startX, y: startY, path: [] }];
+            const visited = Array.from({ length: rows }, () => Array(cols).fill(false));
+
+            while (queue.length > 0) {
+                const { x, y, path } = queue.shift();
+                if (x === targetX && y === targetY) return path;
+
+                visited[y][x] = true;
+
+                const current = maze[y][x];
+                const directions = [
+                    { x: 0, y: -1, wall: 0 },
+                    { x: 1, y: 0, wall: 1 },
+                    { x: 0, y: 1, wall: 2 },
+                    { x: -1, y: 0, wall: 3 }
+                ];
+
+                for (const dir of directions) {
+                    const nx = x + dir.x;
+                    const ny = y + dir.y;
+
+                    if (
+                        nx >= 0 && ny >= 0 && nx < cols &&
+                        ny < rows && !visited[ny][nx] &&
+                        !current.walls[dir.wall]
+                    ) {
+                        queue.push({ x: nx, y: ny, path: [...path, { x: nx, y: ny }] });
+                    }
+                }
+            }
+
+            return [];
+        }
+
+        function animatePath(obj, calculatePath, speed, callback) {
+            function step() {
+                const path = calculatePath();
+                if (path.length > 0) {
+                    obj.x = path[0].x;
+                    obj.y = path[0].y;
+
+                    // Check for collision with the castle
+                    if (obj.x === castle.x && obj.y === castle.y) {
+                        alert(`${obj.emoji === "👽" ? "Alien" : "Penguin"} wins the race!`);
+                        location.reload();
+                        return;
+                    }
+
+                    render();
+                    setTimeout(step, speed);
+                } else if (callback) {
+                    callback();
+                }
+            }
+
+            step();
+        }
+
+        function randomizePositions() {
+            alien.x = 0;
+            alien.y = 0;
+            penguin.x = cols - 1;
+            penguin.y = rows - 1;
+
+            // Randomize the castle position
+            castle.x = Math.floor(Math.random() * cols);
+            castle.y = Math.floor(Math.random() * rows);
+        }
+
+        function startGame() {
+            function raceAlien() {
+                animatePath(alien, () => findPath(alien.x, alien.y, castle.x, castle.y), alienSpeed, raceAlien);
+            }
+
+            function racePenguin() {
+                animatePath(penguin, () => findPath(penguin.x, penguin.y, castle.x, castle.y), penguinSpeed, racePenguin);
+            }
+
+            raceAlien();
+            racePenguin();
+        }
+
+        canvas.addEventListener("click", () => {
+            if (!isAnimating) {
+                isAnimating = true;
+                startGame();
+            }
+        });
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawMaze();
+            drawEmoji(castle);
+            drawEmoji(alien);
+            drawEmoji(penguin);
+        }
+
+        generateMaze();
+        randomizePositions();
+        render();
+    </script>
+</body>
+</html>

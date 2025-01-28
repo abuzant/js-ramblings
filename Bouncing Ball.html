@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotating Triangle with Bouncing Ball</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const triangleSize = 200;
+        let angle = 0;
+        let rotateDirection = 0.01; // Positive for clockwise, negative for counter-clockwise
+        let increaseSpeed = true; // Toggle ball speed increase/decrease
+
+        const ball = {
+            x: centerX,
+            y: centerY - triangleSize / 3,
+            radius: 10,
+            dx: 2,
+            dy: 2
+        };
+
+        function rotatePoint(x, y, angle) {
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+            return {
+                x: cos * x - sin * y,
+                y: sin * x + cos * y
+            };
+        }
+
+        function getTriangleVertices(cx, cy, size, angle) {
+            const vertices = [];
+            for (let i = 0; i < 3; i++) {
+                const a = angle + (i * 2 * Math.PI) / 3;
+                const vertex = rotatePoint(size, 0, a);
+                vertices.push({ x: cx + vertex.x, y: cy + vertex.y });
+            }
+            return vertices;
+        }
+
+        function pointToLineDistance(px, py, x1, y1, x2, y2) {
+            const A = px - x1;
+            const B = py - y1;
+            const C = x2 - x1;
+            const D = y2 - y1;
+
+            const dot = A * C + B * D;
+            const lenSq = C * C + D * D;
+            const param = lenSq !== 0 ? dot / lenSq : -1;
+
+            let nearestX, nearestY;
+
+            if (param < 0) {
+                nearestX = x1;
+                nearestY = y1;
+            } else if (param > 1) {
+                nearestX = x2;
+                nearestY = y2;
+            } else {
+                nearestX = x1 + param * C;
+                nearestY = y1 + param * D;
+            }
+
+            const dx = px - nearestX;
+            const dy = py - nearestY;
+            return { distance: Math.sqrt(dx * dx + dy * dy), nearestX, nearestY };
+        }
+
+        function reflectBall(edge, ball) {
+            const dx = edge.end.x - edge.start.x;
+            const dy = edge.end.y - edge.start.y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+
+            const nx = -dy / length;
+            const ny = dx / length;
+
+            const dot = ball.dx * nx + ball.dy * ny;
+
+            ball.dx -= 2 * dot * nx;
+            ball.dy -= 2 * dot * ny;
+
+            // Adjust speed alternately on collision
+            if (increaseSpeed) {
+                ball.dx *= 2;
+                ball.dy *= 2;
+            } else {
+                ball.dx *= 0.5;
+                ball.dy *= 0.5;
+            }
+            increaseSpeed = !increaseSpeed; // Toggle speed adjustment
+        }
+
+        function constrainBall(vertices) {
+            for (let i = 0; i < vertices.length; i++) {
+                const start = vertices[i];
+                const end = vertices[(i + 1) % vertices.length];
+                const edge = { start, end };
+
+                const { distance, nearestX, nearestY } = pointToLineDistance(
+                    ball.x,
+                    ball.y,
+                    start.x,
+                    start.y,
+                    end.x,
+                    end.y
+                );
+
+                if (distance <= ball.radius) {
+                    reflectBall(edge, ball);
+
+                    // Move the ball slightly outside the collision point to avoid overlapping
+                    const overlap = ball.radius - distance;
+                    const directionX = ball.x - nearestX;
+                    const directionY = ball.y - nearestY;
+                    const directionLength = Math.sqrt(directionX * directionX + directionY * directionY);
+
+                    ball.x += (overlap * directionX) / directionLength;
+                    ball.y += (overlap * directionY) / directionLength;
+                }
+            }
+        }
+
+        function drawTriangle(vertices) {
+            ctx.beginPath();
+            ctx.moveTo(vertices[0].x, vertices[0].y);
+            for (let i = 1; i < vertices.length; i++) {
+                ctx.lineTo(vertices[i].x, vertices[i].y);
+            }
+            ctx.closePath();
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function drawBall() {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#ff0000';
+            ctx.fill();
+        }
+
+        function updateBallPosition(vertices) {
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+            constrainBall(vertices);
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const vertices = getTriangleVertices(centerX, centerY, triangleSize, angle);
+            drawTriangle(vertices);
+            drawBall();
+            updateBallPosition(vertices);
+
+            angle += rotateDirection;
+            requestAnimationFrame(animate);
+        }
+
+        // Event listener to toggle triangle rotation direction
+        canvas.addEventListener('click', () => {
+            rotateDirection *= -1;
+        });
+
+        animate();
+    </script>
+</body>
+</html>
