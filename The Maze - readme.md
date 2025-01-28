@@ -109,3 +109,4 @@ This project is licensed under the MIT License. See the `LICENSE` file for detai
 ---
 
 Enjoy the game and have fun exploring the maze!
+ 
