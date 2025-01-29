@@ -41,14 +41,6 @@ This makes the effect feel more like a **real digital Matrix environment**.
 
 ---
 
-## 📂 File Structure  
-/project-directory
-│── index.html # Main HTML file containing JavaScript logic
-│── README.md # Documentation (this file)
-
-
----
-
 ## ⚡ Installation & Usage  
 1️⃣ Download the `index.html` file and open it in a browser.  
 2️⃣ Move the mouse around to generate **glowing Matrix-like trails**.  
