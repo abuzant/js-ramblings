@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Matrix Mouse Trail</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrixCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById("matrixCanvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Expanded Japanese character set (Hiragana, Katakana, and Kanji)
+        const characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" +
+            "あいうえおかきくけこさしすせそたちつてとなにぬねの" +
+            "はひふへほまみむめもやゆよらりるれろわをん" +
+            "アイウエオカキクケコサシスセソタチツテトナニヌネノ" +
+            "ハヒフヘホマミムメモヤユヨラリルレロワヲン" +
+            "零一二三四五六七八九十百千円日月火水木金土年時分秒";
+
+        const characterArray = characters.split("");
+
+        let trails = [];
+        let lastMouseX = 0, lastMouseY = 0;
+        let mouseSpeed = 0;
+
+        function drawMatrixTrail() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.1)"; // Light fading effect
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            trails.forEach((trail, index) => {
+                ctx.font = `${trail.size}px monospace`;
+
+                // Glowing effect
+                ctx.shadowColor = `rgba(0, 255, 0, ${trail.opacity})`;
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = `rgba(0, 255, 0, ${trail.opacity})`;
+
+                ctx.fillText(trail.character, trail.x, trail.y);
+
+                // Apply gravity effect on burst characters
+                if (trail.burst) {
+                    trail.y += trail.gravity; // Move character downward
+                    trail.gravity += 0.3; // Increase gravity over time
+                }
+
+                // Reduce opacity over time
+                trail.opacity -= 0.09;
+                if (trail.opacity <= 0) {
+                    trails.splice(index, 1);
+                }
+            });
+
+            ctx.shadowBlur = 0; // Reset shadow
+
+            requestAnimationFrame(drawMatrixTrail);
+        }
+
+        function addCharacter(x, y, quantity = 1, isBurst = false) {
+            for (let i = 0; i < quantity; i++) {
+                const randomChar = characterArray[Math.floor(Math.random() * characterArray.length)];
+                const randomSize = Math.floor(Math.random() * 24) + 8; // Random size between 14-42px
+                const randomOpacity = Math.random() * 0.5 + 0.5; // Random opacity between 0.5-1
+                const offsetX = (Math.random() - 0.9) * 24; // Random spread
+                const offsetY = (Math.random() - 0.2) * 16; // Random spread
+
+                trails.push({
+                    x: x + offsetX,
+                    y: y + offsetY,
+                    character: randomChar,
+                    size: randomSize,
+                    opacity: randomOpacity,
+                    burst: isBurst,
+                    gravity: isBurst ? Math.random() * 2.5 : 0 // Gravity applied only to burst
+                });
+            }
+        }
+
+        canvas.addEventListener("mousemove", (event) => {
+            const dx = event.clientX - lastMouseX;
+            const dy = event.clientY - lastMouseY;
+            mouseSpeed = Math.sqrt(dx * dx + dy * dy);
+
+            let quantity = Math.min(10, Math.floor(mouseSpeed / 2) + 1); // Faster movement = more characters
+            addCharacter(event.clientX, event.clientY, quantity);
+
+            lastMouseX = event.clientX;
+            lastMouseY = event.clientY;
+        });
+
+        canvas.addEventListener("click", (event) => {
+            addCharacter(event.clientX, event.clientY, 30, true); // Burst effect: Adds 30 characters with gravity
+        });
+
+        drawMatrixTrail();
+
+        window.addEventListener("resize", () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
