@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tennis Game - Player vs AI</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: black; }
+        canvas { display: block; }
+        .theme-selector {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <select class="theme-selector" id="themeSelector">
+        <option value="grass">Grass Court</option>
+        <option value="clay">Clay Court</option>
+        <option value="hardcourt">Hardcourt</option>
+    </select>
+
+    <canvas id="tennisCanvas"></canvas>
+
+    <audio id="hitSound" src="https://www.fesliyanstudios.com/play-mp3/4387"></audio>
+    <audio id="scoreSound" src="https://www.fesliyanstudios.com/play-mp3/4390"></audio>
+
+    <script>
+        const canvas = document.getElementById("tennisCanvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const themeSelector = document.getElementById("themeSelector");
+
+        // Court Themes
+        const themes = {
+            grass: { color: "green", gridColor: "rgba(0, 50, 0, 0.5)" },
+            clay: { color: "#D2691E", gridColor: "rgba(139, 69, 19, 0.5)" },
+            hardcourt: { color: "#1E3A5F", gridColor: "rgba(30, 58, 95, 0.5)" }
+        };
+
+        let currentTheme = themes.grass;
+
+        const paddleWidth = 20;
+        let playerPaddleHeight = 120;
+        let aiPaddleHeight = 120;
+        const ballSize = 20;
+        const netWidth = 5;
+
+        let player = { x: 50, y: canvas.height / 2 - playerPaddleHeight / 2, score: 0 };
+        let ai = { x: canvas.width - 70, y: canvas.height / 2 - aiPaddleHeight / 2, score: 0 };
+
+        let ball = { x: canvas.width / 2, y: canvas.height / 2, speedX: 5, speedY: 5 };
+        let keys = {};
+
+        const hitSound = document.getElementById("hitSound");
+        const scoreSound = document.getElementById("scoreSound");
+
+        window.addEventListener("keydown", (e) => keys[e.key] = true);
+        window.addEventListener("keyup", (e) => keys[e.key] = false);
+
+        window.addEventListener("mousemove", (e) => {
+            let relativeY = e.clientY - playerPaddleHeight / 2;
+            let relativeX = e.clientX - paddleWidth / 2;
+            if (relativeY >= 0 && relativeY <= canvas.height - playerPaddleHeight) player.y = relativeY;
+            if (relativeX >= 0 && relativeX <= canvas.width / 2 - paddleWidth) player.x = relativeX;
+        });
+
+        themeSelector.addEventListener("change", (e) => {
+            currentTheme = themes[e.target.value];
+        });
+
+        function drawCourt() {
+            ctx.fillStyle = currentTheme.color;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Tennis court gritted dots
+            ctx.fillStyle = currentTheme.gridColor;
+            for (let i = 0; i < canvas.width; i += 30) {
+                for (let j = 0; j < canvas.height; j += 30) {
+                    ctx.fillRect(i, j, 2, 2);
+                }
+            }
+
+            // Net
+            ctx.fillStyle = "white";
+            for (let i = 0; i < canvas.height; i += 20) {
+                ctx.fillRect(canvas.width / 2 - netWidth / 2, i, netWidth, 10);
+            }
+
+            // Scores
+            ctx.font = "40px Arial";
+            ctx.fillText(player.score, canvas.width / 4, 50);
+            ctx.fillText(ai.score, (canvas.width * 3) / 4, 50);
+        }
+
+        function drawPaddles() {
+            ctx.fillStyle = "white";
+            ctx.fillRect(player.x, player.y, paddleWidth, playerPaddleHeight);
+            ctx.fillRect(ai.x, ai.y, paddleWidth, aiPaddleHeight);
+        }
+
+        function drawBall() {
+            ctx.fillStyle = "white";
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ballSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function moveBall() {
+            ball.x += ball.speedX;
+            ball.y += ball.speedY;
+
+            if (ball.y <= 0 || ball.y >= canvas.height) ball.speedY *= -1;
+
+            if (
+                (ball.x <= player.x + paddleWidth && ball.y >= player.y && ball.y <= player.y + playerPaddleHeight) ||
+                (ball.x >= ai.x - ballSize && ball.y >= ai.y && ball.y <= ai.y + aiPaddleHeight)
+            ) {
+                ball.speedX *= -1;
+                hitSound.play();
+            }
+
+            if (ball.x <= 0) {
+                ai.score++;
+                scoreSound.play();
+                shrinkPaddle(player, "player");
+                resetBall();
+            }
+            if (ball.x >= canvas.width) {
+                player.score++;
+                scoreSound.play();
+                shrinkPaddle(ai, "ai");
+                resetBall();
+            }
+        }
+
+        function shrinkPaddle(losingPlayer, type) {
+            if (type === "player" && playerPaddleHeight > 50) playerPaddleHeight -= 10;
+            if (type === "ai" && aiPaddleHeight > 50) aiPaddleHeight -= 10;
+        }
+
+        function resetBall() {
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+            ball.speedX = Math.random() > 0.5 ? 5 : -5;
+            ball.speedY = Math.random() > 0.5 ? 5 : -5;
+        }
+
+        function movePaddles() {
+            if (keys["ArrowUp"] && player.y > 0) player.y -= 7;
+            if (keys["ArrowDown"] && player.y < canvas.height - playerPaddleHeight) player.y += 7;
+            if (keys["ArrowLeft"] && player.x > 0) player.x -= 7;
+            if (keys["ArrowRight"] && player.x < canvas.width / 2 - paddleWidth) player.x += 7;
+
+            moveAI();
+        }
+
+        function moveAI() {
+            const aiSpeed = 4;
+            const reactionDelay = Math.random() > 0.7 ? 10 : 5; 
+            let miscalculation = (Math.random() - 0.5) * 30; 
+
+            if (ai.y + aiPaddleHeight / 2 < ball.y + miscalculation) {
+                if (ai.y < canvas.height - aiPaddleHeight) ai.y += aiSpeed;
+            } else {
+                if (ai.y > 0) ai.y -= aiSpeed;
+            }
+
+            if (Math.random() > 0.98) ai.y += reactionDelay;
+        }
+
+        function update() {
+            moveBall();
+            movePaddles();
+        }
+
+        function draw() {
+            drawCourt();
+            drawPaddles();
+            drawBall();
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+
+</body>
+</html>
