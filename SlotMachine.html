@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slot Machine Game</title>
+    <link rel="stylesheet" href="https://www.fesliyanstudios.com/play-mp3/4387" />
+    <link rel="stylesheet" href="https://www.fesliyanstudios.com/play-mp3/4390" />
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        canvas {
+            display: block;
+            background: black;
+            border: 5px solid gold;
+            border-radius: 15px;
+        }
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 24px;
+            background: gold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: orange;
+        }
+        .credits {
+            font-size: 24px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="slotCanvas"></canvas>
+    <div class="controls">
+        <button onclick="spinSlots()">SPIN 🎰</button>
+        <div class="credits">Credits: <span id="creditCount">100</span></div>
+    </div>
+
+    <audio id="spinSound" src="https://www.fesliyanstudios.com/play-mp3/4387"></audio>
+    <audio id="winSound" src="https://www.fesliyanstudios.com/play-mp3/4390"></audio>
+
+    <script>
+        const canvas = document.getElementById("slotCanvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = 500;
+        canvas.height = 300;
+
+        let credits = 100;
+        let slots = [0, 0, 0]; // Three slot numbers
+        let spinning = false;
+        let spinTime = 2000; // 2 seconds spin time
+        const creditDisplay = document.getElementById("creditCount");
+        const spinSound = document.getElementById("spinSound");
+        const winSound = document.getElementById("winSound");
+
+        const payouts = {
+            111: 10, 222: 20, 333: 30, 444: 40,
+            555: 50, 666: 60, 777: 70, 888: 80,
+            999: 90, 000: 2500
+        };
+
+        function drawSlots() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = "black";
+            ctx.fillRect(50, 50, 400, 200);
+            ctx.fillStyle = "gold";
+            ctx.fillRect(60, 60, 120, 180);
+            ctx.fillRect(190, 60, 120, 180);
+            ctx.fillRect(320, 60, 120, 180);
+
+            ctx.font = "100px Arial";
+            ctx.fillStyle = "white";
+            ctx.textAlign = "center";
+
+            ctx.fillText(slots[0], 120, 160);
+            ctx.fillText(slots[1], 250, 160);
+            ctx.fillText(slots[2], 380, 160);
+        }
+
+        function spinSlots() {
+            if (spinning || credits <= 0) return;
+            spinning = true;
+            credits--; // Deduct credit
+            creditDisplay.textContent = credits;
+
+            spinSound.play(); // Play spinning sound
+
+            let interval = setInterval(() => {
+                slots = [
+                    Math.floor(Math.random() * 10),
+                    Math.floor(Math.random() * 10),
+                    Math.floor(Math.random() * 10)
+                ];
+                drawSlots();
+            }, 100);
+
+            setTimeout(() => {
+                clearInterval(interval);
+                spinning = false;
+                checkWin();
+            }, spinTime);
+        }
+
+        function checkWin() {
+            let combo = slots.join("");
+            if (payouts.hasOwnProperty(combo)) {
+                credits += payouts[combo]; // Award credits
+                creditDisplay.textContent = credits;
+                winSound.play();
+                launchFireworks();
+            }
+        }
+
+        function launchFireworks() {
+            let fireCanvas = document.createElement("canvas");
+            fireCanvas.width = window.innerWidth;
+            fireCanvas.height = window.innerHeight;
+            fireCanvas.style.position = "absolute";
+            fireCanvas.style.top = "0";
+            fireCanvas.style.left = "0";
+            document.body.appendChild(fireCanvas);
+
+            let fctx = fireCanvas.getContext("2d");
+            let particles = [];
+
+            function createParticle() {
+                return {
+                    x: Math.random() * fireCanvas.width,
+                    y: fireCanvas.height,
+                    size: Math.random() * 5 + 2,
+                    speedX: Math.random() * 4 - 2,
+                    speedY: Math.random() * -10 - 5,
+                    color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+                    life: 100
+                };
+            }
+
+            function animateFireworks() {
+                fctx.fillStyle = "rgba(0, 0, 0, 0.1)";
+                fctx.fillRect(0, 0, fireCanvas.width, fireCanvas.height);
+
+                particles.forEach((p, i) => {
+                    p.x += p.speedX;
+                    p.y += p.speedY;
+                    p.speedY += 0.2;
+                    p.life--;
+
+                    fctx.fillStyle = p.color;
+                    fctx.beginPath();
+                    fctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    fctx.fill();
+
+                    if (p.life <= 0) {
+                        particles.splice(i, 1);
+                    }
+                });
+
+                if (particles.length > 0) {
+                    requestAnimationFrame(animateFireworks);
+                } else {
+                    document.body.removeChild(fireCanvas);
+                }
+            }
+
+            for (let i = 0; i < 100; i++) {
+                particles.push(createParticle());
+            }
+
+            animateFireworks();
+        }
+
+        drawSlots();
+    </script>
+
+</body>
+</html>
