@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fireworks Trail with Counter</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: white;
+        }
+        canvas {
+            display: block;
+        }
+        #counter {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 18px;
+            font-family: Arial, sans-serif;
+            color: black;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="fireworksCanvas"></canvas>
+    <div id="counter">Particles: 0</div>
+
+    <script>
+        const canvas = document.getElementById('fireworksCanvas');
+        const ctx = canvas.getContext('2d');
+        const counter = document.getElementById('counter');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        const fireworks = [];
+
+        class Firework {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.particles = [];
+                this.createParticles();
+            }
+
+            createParticles() {
+                const colors = ['#FF1461', '#18FF92', '#5A87FF', '#FBF38C', '#FF7F50', '#FFD700'];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                for (let i = 0; i < 25; i++) {
+                    const angle = Math.random() * 2 * Math.PI;
+                    const speed = Math.random() * 4 + 1;
+                    const size = Math.random() * 3 + 2;
+                    this.particles.push({
+                        x: this.x,
+                        y: this.y,
+                        speedX: Math.cos(angle) * speed,
+                        speedY: Math.sin(angle) * speed,
+                        size: size,
+                        alpha: 1,
+                        color: color
+                    });
+                }
+            }
+
+            update() {
+                this.particles.forEach(particle => {
+                    particle.x += particle.speedX;
+                    particle.y += particle.speedY;
+                    particle.alpha -= 0.025;
+                });
+                this.particles = this.particles.filter(p => p.alpha > 0);
+            }
+
+            draw() {
+                this.particles.forEach(particle => {
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${hexToRgb(particle.color)}, ${particle.alpha})`;
+                    ctx.shadowBlur = 25;
+                    ctx.shadowColor = particle.color;
+                    ctx.fill();
+                });
+            }
+        }
+
+        function hexToRgb(hex) {
+            const bigint = parseInt(hex.slice(1), 16);
+            const r = (bigint >> 16) & 255;
+            const g = (bigint >> 8) & 255;
+            const b = bigint & 255;
+            return `${r}, ${g}, ${b}`;
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            fireworks.push(new Firework(e.clientX, e.clientY));
+        });
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let particleCount = 0;
+
+            fireworks.forEach((firework, index) => {
+                firework.update();
+                firework.draw();
+                particleCount += firework.particles.length;
+                if (firework.particles.length === 0) {
+                    fireworks.splice(index, 1);
+                }
+            });
+
+            counter.textContent = `Particles: ${particleCount}`;
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
